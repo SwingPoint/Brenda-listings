@@ -57,7 +57,11 @@ export default function BrendaListingsPage() {
     galleryPhotos: ['', '', '', '', ''],
     
     // 17. Video Transcript
-    videoTranscript: ''
+    videoTranscript: '',
+    
+    // 18. Coordinates (for GEO SEO)
+    latitude: '',
+    longitude: ''
   });
 
   const [generatedCode, setGeneratedCode] = useState('');
@@ -169,7 +173,11 @@ export default function Page() {
       scheduleUrl: "/book",
       requestReportUrl: "/report"
     }${formData.videoTranscript ? `,
-    videoTranscript: "${formData.videoTranscript.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"` : ''}
+    videoTranscript: "${formData.videoTranscript.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"` : ''}${formData.latitude && formData.longitude ? `,
+    coordinates: {
+      latitude: ${formData.latitude},
+      longitude: ${formData.longitude}
+    }` : ''}
   };
 
   return <ListingPage listing={listing} />;
@@ -228,7 +236,9 @@ export default function Page() {
           agentEmail: '',
           heroPhotoUrl: '',
           galleryPhotos: ['', '', '', '', ''],
-          videoTranscript: ''
+          videoTranscript: '',
+          latitude: '',
+          longitude: ''
         });
         setGeneratedCode('');
         setSlug('');
@@ -533,6 +543,34 @@ export default function Page() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Video transcript or leave blank..."
               />
+            </div>
+
+            {/* 18. GPS Coordinates (for GEO SEO) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                18. GPS Coordinates (Optional - for enhanced local SEO)
+              </label>
+              <p className="text-sm text-gray-500 mb-3">
+                Find coordinates at <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">latlong.net</a>
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.latitude}
+                  onChange={(e) => handleInputChange('latitude', e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Latitude (e.g., 47.6062)"
+                />
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.longitude}
+                  onChange={(e) => handleInputChange('longitude', e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Longitude (e.g., -122.3321)"
+                />
+              </div>
             </div>
 
             {/* Generate Button */}

@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import Head from 'next/head';
 
 export interface ListingData {
   title: string;
@@ -48,6 +49,10 @@ export interface ListingData {
     requestReportUrl: string;
   };
   videoTranscript?: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 interface ListingPageProps {
@@ -68,8 +73,139 @@ export default function ListingPage({ listing }: ListingPageProps) {
     return new Intl.NumberFormat('en-US').format(num);
   };
 
+  // Generate meta description for SEO
+  const metaDescription = `${listing.title} - ${listing.beds} bed, ${listing.baths} bath ${listing.propertyType} for ${formatPrice(listing.price)} in ${listing.address.addressLocality}, ${listing.address.addressRegion}. ${listing.storyIntro.substring(0, 100)}...`;
+
+  // Generate full address string
+  const fullAddress = `${listing.address.streetAddress}, ${listing.address.addressLocality}, ${listing.address.addressRegion} ${listing.address.postalCode}`;
+
+  // Schema.org structured data for Real Estate Listing
+  const propertySchema = {
+    "@context": "https://schema.org",
+    "@type": listing.propertyType === "Condo" ? "Apartment" : "SingleFamilyResidence",
+    "name": listing.title,
+    "description": listing.storyIntro,
+    "url": listing.canonicalUrl,
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": listing.address.streetAddress,
+      "addressLocality": listing.address.addressLocality,
+      "addressRegion": listing.address.addressRegion,
+      "postalCode": listing.address.postalCode,
+      "addressCountry": listing.address.addressCountry
+    },
+    "geo": listing.coordinates ? {
+      "@type": "GeoCoordinates",
+      "latitude": listing.coordinates.latitude,
+      "longitude": listing.coordinates.longitude
+    } : undefined,
+    "numberOfRooms": listing.beds,
+    "numberOfBedrooms": listing.beds,
+    "numberOfBathroomsTotal": listing.baths,
+    "floorSize": {
+      "@type": "QuantitativeValue",
+      "value": listing.livingAreaSqFt,
+      "unitCode": "FTK"
+    },
+    "yearBuilt": listing.yearBuilt,
+    "offers": {
+      "@type": "Offer",
+      "price": listing.price,
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
+      "url": listing.canonicalUrl
+    },
+    "image": [listing.heroPhoto.url, ...listing.gallery.map(g => g.url)],
+    "amenityFeature": listing.features.map(feature => ({
+      "@type": "LocationFeatureSpecification",
+      "name": feature
+    }))
+  };
+
+  // Schema.org structured data for Real Estate Agent
+  const agentSchema = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateAgent",
+    "name": listing.agent.name,
+    "email": listing.agent.email,
+    "telephone": listing.agent.phone,
+    "jobTitle": listing.agent.jobTitle,
+    "worksFor": {
+      "@type": "Organization",
+      "name": listing.agent.brokerage.name
+    }
+  };
+
+  // Schema.org structured data for Place (for local SEO/GEO)
+  const placeSchema = {
+    "@context": "https://schema.org",
+    "@type": "Place",
+    "name": listing.neighborhoodName,
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": listing.address.addressLocality,
+      "addressRegion": listing.address.addressRegion,
+      "addressCountry": listing.address.addressCountry
+    },
+    "geo": listing.coordinates ? {
+      "@type": "GeoCoordinates",
+      "latitude": listing.coordinates.latitude,
+      "longitude": listing.coordinates.longitude
+    } : undefined
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <Head>
+        {/* Primary Meta Tags */}
+        <title>{listing.title} | {formatPrice(listing.price)} | {listing.address.addressLocality}, {listing.address.addressRegion}</title>
+        <meta name="title" content={`${listing.title} | ${formatPrice(listing.price)}`} />
+        <meta name="description" content={metaDescription} />
+        <meta name="keywords" content={`${listing.address.addressLocality} real estate, ${listing.address.addressRegion} homes for sale, ${listing.propertyType}, ${listing.beds} bedroom home, ${listing.agent.brokerage.name}, ${listing.agent.name}`} />
+        <link rel="canonical" href={listing.canonicalUrl} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={listing.canonicalUrl} />
+        <meta property="og:title" content={`${listing.title} | ${formatPrice(listing.price)}`} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:image" content={listing.heroPhoto.url} />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:site_name" content={listing.agent.brokerage.name} />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={listing.canonicalUrl} />
+        <meta name="twitter:title" content={`${listing.title} | ${formatPrice(listing.price)}`} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={listing.heroPhoto.url} />
+
+        {/* Geographic Meta Tags for Local SEO */}
+        <meta name="geo.region" content={`US-${listing.address.addressRegion}`} />
+        <meta name="geo.placename" content={listing.address.addressLocality} />
+        {listing.coordinates && (
+          <>
+            <meta name="geo.position" content={`${listing.coordinates.latitude};${listing.coordinates.longitude}`} />
+            <meta name="ICBM" content={`${listing.coordinates.latitude}, ${listing.coordinates.longitude}`} />
+          </>
+        )}
+
+        {/* Schema.org JSON-LD Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(propertySchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(agentSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(placeSchema) }}
+        />
+      </Head>
+
+      <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <div className="relative h-[60vh] w-full">
         <Image
@@ -275,6 +411,7 @@ export default function ListingPage({ listing }: ListingPageProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
