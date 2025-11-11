@@ -1084,6 +1084,7 @@ add_shortcode('property_listing', 'property_listing_shortcode');
                 </button>
               </div>
             </div>
+            </div>
           )}
         </div>
       </div>
