@@ -65,7 +65,9 @@ export default function BrendaListingsPage() {
   });
 
   const [generatedCode, setGeneratedCode] = useState('');
+  const [generatedJSON, setGeneratedJSON] = useState('');
   const [slug, setSlug] = useState('');
+  const [outputFormat, setOutputFormat] = useState<'nextjs' | 'wordpress'>('nextjs');
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -125,6 +127,64 @@ export default function BrendaListingsPage() {
 
     // Get neighborhood name from city
     const neighborhoodName = formData.city || 'the Area';
+
+    // Generate WordPress JSON
+    const wordpressJSON = {
+      title: formData.title,
+      slug: generatedSlug,
+      canonicalUrl: `https://example.com/listings/${generatedSlug}`,
+      price: parseFloat(formData.price) || 0,
+      address: {
+        streetAddress: formData.streetAddress,
+        addressLocality: formData.city,
+        addressRegion: formData.state,
+        postalCode: formData.zip,
+        addressCountry: "US"
+      },
+      propertyType: formData.propertyType.replace(/\s+/g, ''),
+      beds: parseInt(formData.beds) || 0,
+      baths: parseFloat(formData.baths) || 0,
+      livingAreaSqFt: parseInt(formData.livingArea) || 0,
+      lotSizeSqFt: parseInt(formData.lotSize) || 0,
+      yearBuilt: parseInt(formData.yearBuilt) || 0,
+      heroPhoto: {
+        url: formData.heroPhotoUrl,
+        alt: `${formData.title} - Hero Image`
+      },
+      gallery: validGallery.map((url, idx) => ({
+        url: url,
+        alt: `${formData.title} - Photo ${idx + 1}`
+      })),
+      storyIntro: formData.description,
+      features: validFeatures,
+      neighborhoodName: neighborhoodName,
+      pointsOfInterest: validPOI.map(p => ({
+        name: p.name,
+        minutesAway: parseInt(p.minutes) || 0
+      })),
+      agent: {
+        name: formData.agentName,
+        phone: formData.agentPhone,
+        email: formData.agentEmail,
+        jobTitle: "Real Estate Agent",
+        brokerage: {
+          name: "Windermere Homes & Estates"
+        }
+      },
+      cta: {
+        scheduleUrl: "/book",
+        requestReportUrl: "/report"
+      },
+      ...(formData.videoTranscript && { videoTranscript: formData.videoTranscript }),
+      ...(formData.latitude && formData.longitude && {
+        coordinates: {
+          latitude: parseFloat(formData.latitude),
+          longitude: parseFloat(formData.longitude)
+        }
+      })
+    };
+
+    setGeneratedJSON(JSON.stringify(wordpressJSON, null, 2));
 
     const code = `import ListingPage from "@/components/ListingPage";
 
@@ -241,6 +301,7 @@ export default function Page() {
           longitude: ''
         });
         setGeneratedCode('');
+        setGeneratedJSON('');
         setSlug('');
       } else {
         alert(`Error: ${data.error}`);
@@ -573,6 +634,42 @@ export default function Page() {
               </div>
             </div>
 
+            {/* Output Format Selection */}
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Choose Output Format:
+              </label>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setOutputFormat('nextjs')}
+                  className={`py-3 px-4 rounded-lg font-semibold transition ${
+                    outputFormat === 'nextjs'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-blue-400'
+                  }`}
+                >
+                  📄 Next.js Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOutputFormat('wordpress')}
+                  className={`py-3 px-4 rounded-lg font-semibold transition ${
+                    outputFormat === 'wordpress'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-blue-400'
+                  }`}
+                >
+                  🔌 WordPress JSON
+                </button>
+              </div>
+              <p className="text-sm text-gray-600">
+                {outputFormat === 'nextjs' 
+                  ? '✨ Generate Next.js page code for this Vercel site'
+                  : '✨ Generate WordPress-ready JSON to paste into your WP site'}
+              </p>
+            </div>
+
             {/* Generate Button */}
             <div className="pt-6">
               <button
@@ -580,17 +677,17 @@ export default function Page() {
                 onClick={handleGenerateCode}
                 className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition shadow-lg"
               >
-                Generate Listing Code
+                {outputFormat === 'nextjs' ? '🚀 Generate Next.js Code' : '🔌 Generate WordPress JSON'}
               </button>
             </div>
           </form>
 
-          {/* Generated Code Display */}
-          {generatedCode && (
+          {/* Generated Code Display - Next.js */}
+          {generatedCode && outputFormat === 'nextjs' && (
             <div className="mt-8 p-6 bg-gray-50 rounded-lg border-2 border-blue-200">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-800">
-                  Generated Code
+                  📄 Generated Next.js Code
                 </h2>
                 <button
                   onClick={() => {
@@ -599,7 +696,7 @@ export default function Page() {
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
                 >
-                  Copy Code
+                  📋 Copy Code
                 </button>
               </div>
               
@@ -630,6 +727,84 @@ export default function Page() {
                     app/listings/{slug}/page.tsx
                   </code>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generated Code Display - WordPress JSON */}
+          {generatedJSON && outputFormat === 'wordpress' && (
+            <div className="mt-8 p-6 bg-gray-50 rounded-lg border-2 border-green-200">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">
+                  🔌 WordPress JSON - Ready to Copy!
+                </h2>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedJSON);
+                    alert('JSON copied to clipboard! ✅\n\nPaste this into your WordPress custom field or block.');
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-semibold"
+                >
+                  📋 Copy JSON
+                </button>
+              </div>
+              
+              <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded">
+                <p className="text-sm font-semibold text-green-800 mb-2">
+                  ✅ Instructions for WordPress:
+                </p>
+                <ol className="text-sm text-gray-700 space-y-1 list-decimal list-inside">
+                  <li>Copy the JSON below</li>
+                  <li>Go to your WordPress admin panel</li>
+                  <li>Paste into your custom field, ACF field, or Gutenberg block</li>
+                  <li>Save and publish!</li>
+                </ol>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Tip: This JSON includes all SEO/GEO data and is ready to use with WordPress plugins like ACF Pro, Elementor, or custom themes.
+                </p>
+              </div>
+
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded">
+                <p className="text-xs font-semibold text-yellow-800">
+                  📊 Data Summary: {slug}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  {formData.beds} beds • {formData.baths} baths • ${formData.price?.toLocaleString()} • {formData.city}, {formData.state}
+                </p>
+              </div>
+
+              <pre className="bg-gray-800 text-green-400 p-4 rounded-lg overflow-x-auto text-sm max-h-96">
+                {generatedJSON}
+              </pre>
+
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    const blob = new Blob([generatedJSON], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `listing-${slug}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    alert('JSON file downloaded! 📥');
+                  }}
+                  className="bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                >
+                  💾 Download JSON File
+                </button>
+                
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedJSON);
+                    alert('JSON copied to clipboard! ✅');
+                  }}
+                  className="bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+                >
+                  📋 Copy to Clipboard
+                </button>
               </div>
             </div>
           )}
